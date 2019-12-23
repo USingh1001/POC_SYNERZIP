@@ -1,0 +1,6 @@
+endpoint: https://us1.prisma.sh/udnsingh1001/poc-service/poc-dev
+datamodel: datamodel.prisma
+
+generate:
+  - generator: go-client
+    output: ./generated/prisma-client/

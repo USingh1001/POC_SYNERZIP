@@ -1,0 +1,17 @@
+type User {
+  id: ID! @id
+  name: String!
+}
+
+type Book {
+  id: ID! @id
+  isbn: String! @unique
+  title: String!
+  subtitle: String!
+  author: String!  
+  published: String!
+  publisher: String
+  pages: Int
+  description: String
+  website: String 
+}
