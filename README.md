@@ -2,7 +2,7 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 Required Commands for getting this POC running on your local machine:
 
-Clone/Download this project from Github location provided - https://github.com/USingh1001/POC_SYNERZIP
+Fork this project from Github location provided - https://github.com/USingh1001/POC_SYNERZIP
 
 Install necessary dependencies with "npm install" command
 

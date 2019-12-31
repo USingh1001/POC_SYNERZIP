@@ -8,58 +8,52 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import BookTableHead from './BookTableHead';
 import BookTableToolbar from './BookTableToolbar';
 import BookDialog from './BookDialog';
-import gql from 'graphql-tag'
+import gql from 'graphql-tag';
+import {observer } from 'mobx-react-lite';
+import BookStore from './BookStore'
+
+const Book_Information_Fragment = gql`
+  fragment BookInformation on Book{
+    id
+    isbn
+    title
+    subtitle
+    author
+    published
+    publisher
+    pages
+    description
+    website
+  }`  
 
 // GraphQl Tag - Query
 const BOOKS_FEED = gql`
   {
     books {
-      id
-      isbn
-      title
-      subtitle
-      author
-      published
-      publisher
-      pages
-      description
-      website
+      ...BookInformation
     }
   }
+  ${Book_Information_Fragment}
 `
 // GraphQl Tag - Mutation - Create
 const BOOK_ADD = gql`
-mutation createBook($isbn: String! $title: String! $subtitle: String! $author: String! $published: String! $publisher: String $pages: Int $description: String $website: String){
-  createBook(data:{isbn: $isbn , title: $title, subtitle: $subtitle, author: $author, published: $published, publisher: $publisher, pages: $pages, description: $description, website: $website}) {
-    id
-    isbn
-    title
-    subtitle
-    author
-    published
-    publisher
-    pages
-    description
-    website
+  mutation createBook($isbn: String! $title: String! $subtitle: String! $author: String! $published: String! $publisher: String $pages: Int $description: String $website: String){
+    createBook(data:{isbn: $isbn , title: $title, subtitle: $subtitle, author: $author, published: $published, publisher: $publisher, pages: $pages, description: $description, website: $website}) {
+      ...BookInformation
+    }
   }
-}`
+  ${Book_Information_Fragment}
+`
 
 // GraphQl Tag - Mutation - Create
 const BOOK_EDIT = gql`
-mutation updateBook($isbn: String!, $title: String! $subtitle: String! $author: String! $published: String! $publisher: String $pages: Int $description: String $website: String) {
-  updateBook(where: {isbn: $isbn}, data: {isbn: $isbn , title: $title, subtitle: $subtitle, author: $author, published: $published, publisher: $publisher, pages: $pages, description: $description, website: $website}) {
-    id
-    isbn
-    title
-    subtitle
-    author
-    published
-    publisher
-    pages
-    description
-    website
+  mutation updateBook($isbn: String!, $title: String! $subtitle: String! $author: String! $published: String! $publisher: String $pages: Int $description: String $website: String) {
+    updateBook(where: {isbn: $isbn}, data: {isbn: $isbn , title: $title, subtitle: $subtitle, author: $author, published: $published, publisher: $publisher, pages: $pages, description: $description, website: $website}) {
+      ...BookInformation
+    }
   }
-}`
+  ${Book_Information_Fragment}
+`
 
 // GraphQl Tag - Mutation - Delete
 const BOOK_DELETE = gql`
@@ -136,15 +130,20 @@ function getSorting(order, orderBy) {
   return order === 'desc' ? (a, b) => desc(a, b, orderBy) : (a, b) => -desc(a, b, orderBy);
 }
 
-export default function BookTable() {
+const BookTable = observer(() => {
   const classes = useStyles();
-  const [order, setOrder] = useState('asc');
-  const [orderBy, setOrderBy] = useState('published');
-  const [selected, setSelected] = useState([]);
-  const [page, setPage] = useState(0);
-  const [dense, setDense] = useState(false);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [modal, setModal] = useState({"openModal": false, "modalTitle":"", "updateBook":{}});
+  const store = BookStore;  
+  
+  //const [order, setOrder] = useState('asc');
+  //const [orderBy, setOrderBy] = useState('published');
+
+  //const [selected, setSelected] = useState([]);
+  
+  //const [page, setPage] = useState(0);
+  //const [rowsPerPage, setRowsPerPage] = useState(5);
+
+  //const [dense, setDense] = useState(false);
+  //const [modal, setModal] = useState({"openModal": false, "modalTitle":"", "updateBook":{}});
   
   // Mutation for Add Book
   const [addBookMutation, {loading: mutationAddLoading, error: mutationAddError}] = useMutation(BOOK_ADD);
@@ -163,63 +162,67 @@ export default function BookTable() {
   if (loading) return <div>Loading…</div>
   if (error) return <div>Error</div>;
   const rows = data.books;
-
+  store.setBooks(data.books);
+  
   // Sorting
   const handleRequestSort = (event, property) => {
-    const isDesc = orderBy === property && order === 'desc';
-    setOrder(isDesc ? 'asc' : 'desc');
-    setOrderBy(property);
+    const isDesc = store.orderBy === property && store.order === 'desc';
+    store.setOrder(isDesc ? 'asc' : 'desc');
+    store.setOrderBy(property);
   };
 
   // Selection all and as per single/multiple selection
   const handleSelectAllClick = event => {
     if (event.target.checked) {
       const newSelecteds = rows.map(n => n.isbn);
-      setSelected(newSelecteds);
+      store.setSelected(newSelecteds);
       return;
     }
-    setSelected([]);
+    store.setSelected([]);
   };
 
-  const handleClick = (event, isbn) => {
-    const selectedIndex = selected.indexOf(isbn);
+  const handleClick = (isbn) => {
+    const selectedIndex = store.selected.indexOf(isbn);
     let newSelected = [];
 
     if (selectedIndex === -1) {
-      newSelected = newSelected.concat(selected, isbn);
+      newSelected = newSelected.concat(store.selected, isbn);
     } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selected.slice(1));
-    } else if (selectedIndex === selected.length - 1) {
-      newSelected = newSelected.concat(selected.slice(0, -1));
+      newSelected = newSelected.concat(store.selected.slice(1));
+    } else if (selectedIndex === store.selected.length - 1) {
+      newSelected = newSelected.concat(store.selected.slice(0, -1));
     } else if (selectedIndex > 0) {
       newSelected = newSelected.concat(
-        selected.slice(0, selectedIndex),
-        selected.slice(selectedIndex + 1),
+        store.selected.slice(0, selectedIndex),
+        store.selected.slice(selectedIndex + 1),
       );
     }
-    setSelected(newSelected);
+    store.setSelected(newSelected);
   };
 
   //Pagination
   const handleChangePage = (event, newPage) => {
-    setPage(newPage);
+    store.setPage(newPage);
   };
 
   const handleChangeRowsPerPage = event => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
+    store.setRowsPerPage(parseInt(event.target.value, 10));
+    store.setPage(0);
   };
   
   // Dense Table 
   const handleChangeDense = event => {
-    setDense(event.target.checked);
+    store.setDense(event.target.checked);
   };
+
+  //const isSelected = isbn => store.selected.indexOf(isbn) !== -1;
+  
+  const emptyRows = store.rowsPerPage - Math.min(store.rowsPerPage, rows.length - store.page * store.rowsPerPage);
 
   // ADD BOOK 
   const handleAddBook = (book = {}) => {
     addBookMutation({
       variables: {isbn: book.isbn, title: book.title, subtitle: book.subtitle, author: book.author, published: book.published, publisher: book.publisher, pages: book.pages, description: book.description, website: book.website},
-      optimisticResponse: null,
       update: (cache, {data}) => {
         const existingBooks = cache.readQuery({ query: BOOKS_FEED }); 
         const newBook = data.createBook; 
@@ -234,11 +237,10 @@ export default function BookTable() {
 
   // EDIT BOOK
   const handleEditBook = (book = {}) => {
-    updateBookMutation({
-      variables: {isbn: book.isbn, title: book.title, subtitle: book.subtitle, author: book.author, published: book.published, publisher: book.publisher, pages: book.pages, description: book.description, website: book.website},
-      optimisticResponse: null,
-      update: () => modalOpen(false)
+    var updatePromise  = updateBookMutation({
+      variables: {isbn: book.isbn, title: book.title, subtitle: book.subtitle, author: book.author, published: book.published, publisher: book.publisher, pages: book.pages, description: book.description, website: book.website}
     });
+    updatePromise.then(() =>  modalOpen(false));
   };
 
   // DELETE BOOK
@@ -247,7 +249,6 @@ export default function BookTable() {
     event.stopPropagation();
     removeBookMutation({
       variables: {isbn: row.isbn},
-      optimisticResponse: null,
       update: (cache) => {
         const existingBooks = cache.readQuery({ query: BOOKS_FEED });
         const updatedBooks = existingBooks.books.filter(book => (book.isbn !== row.isbn));
@@ -255,7 +256,7 @@ export default function BookTable() {
           query: BOOKS_FEED,
           data: {books: updatedBooks}
         });
-        setSelected([]);
+        store.setSelected([]);
       }
     });
   };
@@ -263,63 +264,60 @@ export default function BookTable() {
   // DELETE SELECTED BOOKS
   const handleDeleteSelectedBooks = () => {
     removeSelectedBooksMutation({
-      variables: {isbn_in: selected},
-      optimisticResponse: null,
+      variables: {isbn_in: store.selected},
       update: (cache) => {
         const existingBooks = cache.readQuery({ query: BOOKS_FEED });
-        const updatedBooks = existingBooks.books.filter(book => (!selected.includes(book.isbn)));
+        const updatedBooks = existingBooks.books.filter(book => (!store.selected.includes(book.isbn)));
         cache.writeQuery({
           query: BOOKS_FEED,
           data: {books: updatedBooks}
         });
-        setSelected([]);
+        store.setSelected([]);
       }
     });  
   }
 
   // ADD/EDIT MODAL OPEN
   const modalOpen = (bool, title="", book = {}) => { 
-    let currentModal = {...modal}; 
+    /* let currentModal = {...modal}; */
+    let currentModal = {};
     currentModal.openModal = bool;
     currentModal.modalTitle = title;
     currentModal.updateBook = book; 
-    setModal(currentModal);
+    /* setModal(currentModal); */
+    store.modalUpdate(currentModal);
   };
-
-  const isSelected = isbn => selected.indexOf(isbn) !== -1;
-  
-  const emptyRows = rowsPerPage - Math.min(rowsPerPage, rows.length - page * rowsPerPage);
 
   return (
     <div className={classes.root}>
-      {/* To Do Add Spinners when user is waiting upon data from GraphQL API*/}
+      {/* To Do Add Spinners when user is waiting upon data from GraphQL API */}
       {mutationBatchDeleteLoading && <p>Loading...</p>}
         {mutationBatchDeleteError && <p>Error :( Please try again</p>}
       <Paper className={classes.paper}>
         {/* To Do Conditional Rendering of Modal as not required at all times on webpage */}
-        <BookDialog open={modal.openModal} title={modal.modalTitle} handleClickOpen={modalOpen} addBook={handleAddBook} editBook={handleEditBook} refBook={modal.updateBook}/>
-        <BookTableToolbar numSelected={selected.length} deleteBooks={handleDeleteSelectedBooks} handleClickOpen={modalOpen}/>
+        <BookDialog open={store.modal.openModal} title={store.modal.modalTitle} handleClickOpen={modalOpen} addBook={handleAddBook} editBook={handleEditBook} refBook={store.modal.updateBook}/>
+        <BookTableToolbar numSelected={store.selected.length} deleteBooks={handleDeleteSelectedBooks} handleClickOpen={modalOpen}/>
         <div className={classes.tableWrapper}>
           <Table
             className={classes.table}
             aria-labelledby="tableTitle"
-            size={dense ? 'small' : 'medium'}
+            size={store.dense ? 'small' : 'medium'}
             aria-label="content table"
           >
             <BookTableHead
               classes={classes}
-              numSelected={selected.length}
-              order={order}
-              orderBy={orderBy}
+              numSelected={store.selected.length}
+              order={store.order}
+              orderBy={store.orderBy}
               onSelectAllClick={handleSelectAllClick}
               onRequestSort={handleRequestSort}
               rowCount={rows.length}
             />
             <TableBody>
-              {stableSort(rows, getSorting(order, orderBy))
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+              {stableSort(rows, getSorting(store.order, store.orderBy))
+                .slice(store.page * store.rowsPerPage, store.page * store.rowsPerPage + store.rowsPerPage)
                 .map((row, index) => {
-                  const isItemSelected = isSelected(row.isbn);
+                  const isItemSelected = store.getSelected(row.isbn);
                   const labelId = `book-table-checkbox-${index}`;
 
                   return (
@@ -331,7 +329,7 @@ export default function BookTable() {
                       <TableCell padding="checkbox">
                         <Checkbox
                           checked={isItemSelected}
-                          onClick={event => handleClick(event, row.isbn)}
+                          onClick={() => handleClick(row.isbn)}
                           inputProps={{ 'aria-labelledby': labelId }}
                         />
                       </TableCell>
@@ -356,7 +354,7 @@ export default function BookTable() {
                   );
                 })}
               {emptyRows > 0 && (
-                <TableRow style={{ height: (dense ? 33 : 53) * emptyRows }}>
+                <TableRow style={{ height: (store.dense ? 33 : 53) * emptyRows }}>
                   <TableCell colSpan={7} />
                 </TableRow>
               )}
@@ -367,16 +365,19 @@ export default function BookTable() {
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
           count={rows.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
+          rowsPerPage={store.rowsPerPage}
+          page={store.page}
           onChangePage={handleChangePage}
           onChangeRowsPerPage={handleChangeRowsPerPage}
         />
       </Paper>
       <FormControlLabel
-        control={<Switch checked={dense} onChange={handleChangeDense} />}
+        control={<Switch checked={store.dense} onChange={handleChangeDense} />}
         label="Dense padding"
       />
     </div>
   );
-}
+})
+
+
+export default BookTable;

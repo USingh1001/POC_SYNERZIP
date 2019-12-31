@@ -1,6 +1,8 @@
-import React, {useState} from 'react';
+import React, {useState, useContext} from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle } from '@material-ui/core';
+import {observer } from 'mobx-react-lite';
+import BookDialogStore from './BookDialogStore'
 
 // Styles for Book Dialog
 const useDialogStyles = makeStyles(theme => ({
@@ -11,83 +13,85 @@ const useDialogStyles = makeStyles(theme => ({
     }
 }));
 
-export default function BookDialog(props) {
+const BookDialog = observer((props) => {
   const classes = useDialogStyles();  
-  const [required, setRequired] = useState({}); 
-  const [book, setBook]  = useState({});
-  const [disableBool, setDisableBool] = useState(true);
+  //const [required, setRequired] = useState({}); 
+  //const [book, setBook]  = useState({});
+  //const [disableBool, setDisableBool] = useState(true);
+  const store = BookDialogStore;
   
   const handleSubmit = () => {  
     var flag = 0;  
-    var requiredCheck = {...required}
+    var requiredCheck = {...store.required}
     requiredCheck = {"isbn": true, "title" : true, "subtitle" : true, "author": true, "published": true};
-    for(let key in book){
+    for(let key in store.book){
         switch(key){
             case "isbn" :
-                if (book[key]){ 
+                if (store.book[key]){ 
                     flag++;
                     requiredCheck.isbn = false;
                 }
                 break;
             case "title" :
-                if (book[key]) {
+                if (store.book[key]) {
                     flag++; 
                     requiredCheck.title = false;
                 }
                 break;
             case "subtitle" :
-                if (book[key]) { 
+                if (store.book[key]) { 
                     flag++;
                     requiredCheck.subtitle = false;
                 }
                 break;
             case "author" :   
-                if (book[key]){ 
+                if (store.book[key]){ 
                     flag++;
                     requiredCheck.author = false;
                 }
                 break;
             case "published" :
-                if (book[key]) { 
+                if (store.book[key]) { 
                     flag++;
                     requiredCheck.published = false;
                 }
                 break;          
         }
     } 
-    setDisableBool(true);
+    store.setDisableBool(true);
     if(flag === 5){
         if(props.title === "add"){
-            props.addBook(book);    
+            props.addBook(store.book);    
         }else if(props.title === "edit"){
-            props.editBook(book);
+            props.editBook(store.book);
         }
-        setBook({});
+        store.setBook({});
     } else {
-        setRequired(requiredCheck);
+        store.setRequired(requiredCheck);
     }
-  }  
+  }
+
   const handleChangeInput = (e) => {  
-    var bookInput = {...book};
-    if(Object.keys(props.refBook).length !== 0 && Object.keys(book).length === 0){
+    var bookInput = {...store.book};
+    if(Object.keys(props.refBook).length !== 0 && Object.keys(store.book).length === 0){
        bookInput = {...props.refBook};
-       setBook(bookInput);     
+       store.setBook(bookInput);     
     } 
     bookInput[e.target.id] = e.target.value;
     if (e.target.id === "pages")
         bookInput[e.target.id] = parseInt(bookInput[e.target.id]);
-    setBook(bookInput);
-    setDisableBool(false);
-    const currentRequired = {...required};
-    if(Object.keys(required).length !== 0 && required[e.target.id] !== false){ 
+    store.setBook(bookInput);
+    store.setDisableBool(false);
+    const currentRequired = {...store.required};
+    if(Object.keys(store.required).length !== 0 && store.required[e.target.id] !== false){ 
         currentRequired[e.target.id] = false;
-        setRequired(currentRequired);
+        store.setRequired(currentRequired);
     }
   }
   
   const handleClose = () =>{
-    setBook({});
-    setRequired({});  
+    store.setBook({});
+    store.setRequired({});  
     props.handleClickOpen(false);
   }
   
@@ -96,11 +100,11 @@ export default function BookDialog(props) {
       <Dialog open={props.open} onClose={handleClose} aria-labelledby="form-dialog-title">
         <DialogTitle id="form-dialog-title" className={classes.root}>{typeof(props.title) !== "undefined" && props.title ? props.title.toUpperCase() + " BOOK" : ""}</DialogTitle>
         <DialogContent>
-          <TextField error = {required.isbn || false} required margin="dense" id="isbn" label="ISBN" type="number" defaultValue={props.refBook.isbn || ""} fullWidth onChange={handleChangeInput}/>
-          <TextField error = {required.title || false} required margin="dense" id="title" label="Title" defaultValue={props.refBook.title || ""} fullWidth onChange={handleChangeInput}/>
-          <TextField error = {required.subtitle || false} required margin="dense" id="subtitle" label="Subtitle" defaultValue={props.refBook.subtitle || ""} fullWidth onChange={handleChangeInput}/>
-          <TextField error = {required.author || false} required margin="dense" id="author" label="Author" defaultValue={props.refBook.author || ""} fullWidth onChange={handleChangeInput}/>
-          <TextField error = {required.published || false} required margin="dense" id="published" label="Published" defaultValue={props.refBook.published || ""} fullWidth onChange={handleChangeInput}/>
+          <TextField error = {store.required.isbn || false} required margin="dense" id="isbn" label="ISBN" type="number" defaultValue={props.refBook.isbn || ""} fullWidth onChange={handleChangeInput}/>
+          <TextField error = {store.required.title || false} required margin="dense" id="title" label="Title" defaultValue={props.refBook.title || ""} fullWidth onChange={handleChangeInput}/>
+          <TextField error = {store.required.subtitle || false} required margin="dense" id="subtitle" label="Subtitle" defaultValue={props.refBook.subtitle || ""} fullWidth onChange={handleChangeInput}/>
+          <TextField error = {store.required.author || false} required margin="dense" id="author" label="Author" defaultValue={props.refBook.author || ""} fullWidth onChange={handleChangeInput}/>
+          <TextField error = {store.required.published || false} required margin="dense" id="published" label="Published" defaultValue={props.refBook.published || ""} fullWidth onChange={handleChangeInput}/>
           <TextField margin="dense" id="publisher" label="Publisher" defaultValue={props.refBook.publisher || ""} fullWidth onChange={handleChangeInput}/>
           <TextField margin="dense" id="pages" label="Pages" type="number" defaultValue={props.refBook.pages || ""} fullWidth onChange={handleChangeInput}/>
           <TextField margin="dense" id="description" label="Description" defaultValue={props.refBook.description || ""} fullWidth onChange={handleChangeInput}/>
@@ -110,11 +114,13 @@ export default function BookDialog(props) {
           <Button color="primary" onClick={handleClose}>
             Cancel
           </Button>
-          <Button color="primary" disabled={disableBool} onClick={handleSubmit}>
+          <Button color="primary" disabled={store.disableBool} onClick={handleSubmit}>
             { typeof(props.title) !== "undefined" && props.title ? props.title.toUpperCase() + " BOOK" : ""}
           </Button>
         </DialogActions>
       </Dialog>
     </div>
   );
-}
+})
+
+export default BookDialog
